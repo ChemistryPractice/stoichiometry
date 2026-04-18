@@ -84,12 +84,27 @@
     let currentData = {};
 
     function setMode(mode, btn) {
-        currentMode = mode;
-        document.querySelectorAll('.side-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('title-display').innerText = btn.innerText;
-        document.getElementById('answer-display').classList.remove('visible');
-    }
+    currentMode = mode;
+    
+    // 1. Manage button highlighting
+    document.querySelectorAll('.side-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // 2. Update the Title
+    document.getElementById('title-display').innerText = btn.innerText;
+    
+    // 3. CLEAR existing content
+    document.getElementById('equation-display').innerHTML = "Click 'Generate' to begin!";
+    document.getElementById('problem-text').innerHTML = "New problem type selected. Ready when you are.";
+    
+    // 4. Hide and clear the answer box
+    const ad = document.getElementById('answer-display');
+    ad.classList.remove('visible');
+    ad.innerHTML = "";
+    
+    // Reset internal data so "Show Answer" doesn't trigger on old data
+    currentData = {};
+}
 
     // This regex only targets numbers that follow a letter or a ')'
 function formatSub(text) { 
