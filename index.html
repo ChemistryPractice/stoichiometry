@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stoichiometry Master</title>
+    <title>Stoichiometry Practice</title>
     <style>
         :root { --primary: #2c3e50; --accent: #e67e22; --error: #c0392b; --bg: #f4f7f6; --sidebar: #34495e; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; min-height: 100vh; }
@@ -52,6 +52,16 @@
     <div class="card">
         <h1 id="title-display">Select a Category</h1>
         <button class="gen-btn" onclick="generateProblem()">Generate New Problem</button>
+
+        <div id="instruction-box" style="background-color: #f9f9f9; border-left: 5px solid #2c3e50; padding: 20px; margin-bottom: 20px; border-radius: 5px;">
+            <h3>How to use this page:</h3>
+            <ol>
+            <li>Select the type of problem from the sidebar on the left.</li>
+            <li>Click <b>"Generate New Problem"</b>.</li>
+            <li>Solve the problem on your paper.</li>
+            <li>Click <b>"Show Step-by-Step Answer"</b> to see how to solve the problem and check your work.</li>
+        </ol>
+</div>
         
         <div id="equation-display">Select a type from the left...</div>
         
