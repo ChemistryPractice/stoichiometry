@@ -76,19 +76,19 @@
         // Replace the titrations array in your data object:
 titrations: [
     { 
-        eq: "1HCl + 1NaOH → 1NaCl + 1H₂O", 
+        eq: "HCl + NaOH → NaCl + H₂O", 
         acid: "HCl", base: "NaOH", 
         cA: 1, cB: 1, // Coefficients
         aMass: 36.46, bMass: 40.00 
     },
     { 
-        eq: "1H₂SO₄ + 2NaOH → 1Na₂SO₄ + 2H₂O", 
+        eq: "H₂SO₄ + 2NaOH → Na₂SO₄ + 2H₂O", 
         acid: "H₂SO₄", base: "NaOH", 
         cA: 1, cB: 2, 
         aMass: 98.08, bMass: 40.00 
     },
     { 
-        eq: "2HCl + 1Ca(OH)₂ → 1CaCl₂ + 2H₂O", 
+        eq: "2HCl + Ca(OH)₂ → CaCl₂ + 2H₂O", 
         acid: "HCl", base: "Ca(OH)₂", 
         cA: 2, cB: 1, 
         aMass: 36.46, bMass: 74.10 
@@ -200,11 +200,42 @@ function formatSub(text) {
         ad.classList.add('visible');
         let steps = "";
 
-        if (currentData.type === 'titration') {
-            steps = `1. Write balanced equation.<br>2. Find moles of known.<br>3. Use mole ratio.<br>4. Solve for unknown.`;
-            ad.innerHTML = `<strong>Titration Solution:</strong><br>${steps}`;
-            return;
-        }
+        // Inside your showAnswer() function, replace the titration block:
+if (currentData.type === 'titration') {
+    const d = currentData;
+    let result = "";
+    let mathSteps = "";
+
+    if (d.solveForVol) {
+        // Solving for Volume of Base (Vb)
+        // Moles Acid = Ma * Va
+        const molesAcid = (d.knownM * (d.knownV / 1000)).toFixed(5);
+        // Moles Base = Moles Acid * (coeffBase / coeffAcid)
+        const molesBase = (molesAcid * (d.cB / d.cA)).toFixed(5);
+        // Vol Base = Moles Base / Mb
+        const finalVol = (molesBase / d.unknownVal * 1000).toFixed(2);
+
+        mathSteps = `
+            1. Moles ${d.acid}: (${d.knownM} M) &times; (0.0${d.knownV.replace('.','')} L) = ${molesAcid} mol<br>
+            2. Mole Ratio: ${molesAcid} mol ${d.acid} &times; ${frac(d.cB+' mol '+d.base, d.cA+' mol '+d.acid)} = ${molesBase} mol ${d.base}<br>
+            3. Final Volume: ${frac(molesBase + ' mol', d.unknownVal + ' M')} &times; 1000 = <b>${finalVol} mL ${d.base}</b>
+        `;
+    } else {
+        // Solving for Molarity of Acid (Ma)
+        const molesBase = (d.knownM * (d.unknownVal / 1000)).toFixed(5);
+        const molesAcid = (molesBase * (d.cA / d.cB)).toFixed(5);
+        const finalM = (molesAcid / (d.knownV / 1000)).toFixed(3);
+
+        mathSteps = `
+            1. Moles ${d.base}: (${d.knownM} M) &times; (${(d.unknownVal/1000).toFixed(4)} L) = ${molesBase} mol<br>
+            2. Mole Ratio: ${molesBase} mol ${d.base} &times; ${frac(d.cA+' mol '+d.acid, d.cB+' mol '+d.base)} = ${molesAcid} mol ${d.acid}<br>
+            3. Final Molarity: ${frac(molesAcid + ' mol', (d.knownV/1000).toFixed(4) + ' L')} = <b>${finalM} M ${d.acid}</b>
+        `;
+    }
+
+    ad.innerHTML = `<strong>Titration Solution:</strong><div class="setup-container" style="display:block;">${formatSub(mathSteps)}</div>`;
+    return;
+}
 
         const v = currentData.inputVal;
         const ratio = frac(`${currentData.coeffB} mol ${currentData.nameB}`, `${currentData.coeffA} mol ${currentData.nameA}`);
