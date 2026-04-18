@@ -73,11 +73,27 @@
             { eq: "2Na + Cl₂ → 2NaCl", ratio: [2, 1, 2], names: ["Na", "Cl₂", "NaCl"], masses: [22.99, 70.90, 58.44] },
             { eq: "CaCO₃ → CaO + CO₂", ratio: [1, 1, 1], names: ["CaCO₃", "CaO", "CO₂"], masses: [100.09, 56.08, 44.01] }
         ],
-        titrations: [
-            { acid: "HCl", base: "NaOH", ratio: [1, 1] },
-            { acid: "H₂SO₄", base: "NaOH", ratio: [1, 2] },
-            { acid: "HCl", base: "Ca(OH)₂", ratio: [2, 1] }
-        ]
+        // Replace the titrations array in your data object:
+titrations: [
+    { 
+        eq: "1HCl + 1NaOH → 1NaCl + 1H₂O", 
+        acid: "HCl", base: "NaOH", 
+        cA: 1, cB: 1, // Coefficients
+        aMass: 36.46, bMass: 40.00 
+    },
+    { 
+        eq: "1H₂SO₄ + 2NaOH → 1Na₂SO₄ + 2H₂O", 
+        acid: "H₂SO₄", base: "NaOH", 
+        cA: 1, cB: 2, 
+        aMass: 98.08, bMass: 40.00 
+    },
+    { 
+        eq: "2HCl + 1Ca(OH)₂ → 1CaCl₂ + 2H₂O", 
+        acid: "HCl", base: "Ca(OH)₂", 
+        cA: 2, cB: 1, 
+        aMass: 36.46, bMass: 74.10 
+    }
+]
     };
 
     let currentMode = '';
@@ -119,19 +135,32 @@ function formatSub(text) {
         const val = (Math.random() * 5 + 1).toFixed(2);
         
         if (currentMode === 'titration') {
-            const t = data.titrations[Math.floor(Math.random() * data.titrations.length)];
-            const solveForVol = Math.random() > 0.5;
-            const knownM = (Math.random() * 0.5 + 0.1).toFixed(3);
-            const knownV = (Math.random() * 40 + 10).toFixed(2);
-            const unknownM = (Math.random() * 0.5 + 0.1).toFixed(3);
-            
-            currentData = { ...t, knownM, knownV, unknownM, solveForVol, type: 'titration' };
-            document.getElementById('equation-display').innerHTML = `${t.acid} + ${t.base} Reaction`;
-            document.getElementById('problem-text').innerHTML = solveForVol 
-                ? `What <b>volume (mL)</b> of ${unknownM} M ${t.base} is needed to neutralize ${knownV} mL of ${knownM} M ${t.acid}?`
-                : `What is the <b>molarity</b> of ${t.acid} if ${knownV} mL of it is neutralized by ${(Math.random()*30+10).toFixed(2)} mL of ${knownM} M ${t.base}?`;
-            return;
-        }
+    const t = data.titrations[Math.floor(Math.random() * data.titrations.length)];
+    const solveForVol = Math.random() > 0.5; // Randomly decide to solve for V or M
+    
+    // Randomize known values
+    const knownM = (Math.random() * 0.4 + 0.1).toFixed(3); // 0.100 - 0.500 M
+    const knownV = (Math.random() * 30 + 10).toFixed(2);   // 10.00 - 40.00 mL
+    const unknownVal = (Math.random() * 0.4 + 0.1).toFixed(3); // The other M or V
+    
+    currentData = { 
+        ...t, 
+        knownM, knownV, unknownVal, 
+        solveForVol, 
+        type: 'titration' 
+    };
+
+    document.getElementById('equation-display').innerHTML = formatSub(t.eq);
+    
+    if (solveForVol) {
+        document.getElementById('problem-text').innerHTML = 
+            `What <b>volume (mL)</b> of ${unknownVal} M ${t.base} is needed to completely neutralize ${knownV} mL of ${knownM} M ${t.acid}?`;
+    } else {
+        document.getElementById('problem-text').innerHTML = 
+            `What is the <b>molarity</b> of the ${t.acid} solution if ${knownV} mL of it is neutralized by ${unknownVal} mL of ${knownM} M ${t.base}?`;
+    }
+    return;
+}
 
         // Standard Stoich
         const idxA = Math.floor(Math.random() * eqSet.names.length);
