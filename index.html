@@ -240,70 +240,80 @@ function showAnswer() {
     ad.classList.add('visible');
     const d = currentData;
     const v = d.inputVal;
+    
+    // Determine sig figs from input (Titration uses knownM, Stoich uses inputVal)
+    const sf = d.type === 'titration' ? countSigFigs(d.knownM.toString()) : countSigFigs(v.toString());
+    
     let steps = "";
 
-    // Preservation of Titration Answer Logic
+    // 1. Titration Logic with Sig Figs
     if (d.type === 'titration') {
         let mathSteps = "";
         if (d.solveForVol) {
-            const molesAcid = (d.knownM * (d.knownV / 1000)).toFixed(5);
-            const molesBase = (molesAcid * (d.cB / d.cA)).toFixed(5);
-            const finalVol = (molesBase / d.unknownVal * 1000).toFixed(2);
+            const molesAcid = (d.knownM * (d.knownV / 1000));
+            const molesBase = (molesAcid * (d.cB / d.cA));
+            const finalVol = (molesBase / d.unknownVal * 1000);
+
             mathSteps = `
-                1. Moles ${d.acid}: (${d.knownM} M) &times; (0.0${d.knownV.replace('.','')} L) = ${molesAcid} mol<br>
-                2. Mole Ratio: ${molesAcid} mol ${d.acid} &times; ${frac(d.cB+' mol '+d.base, d.cA+' mol '+d.acid)} = ${molesBase} mol ${d.base}<br>
-                3. Final Volume: ${frac(molesBase + ' mol', d.unknownVal + ' M')} &times; 1000 = <b>${finalVol} mL ${d.base}</b>
+                1. Moles ${d.acid}: (${d.knownM} M) &times; (${(d.knownV/1000).toFixed(4)} L) = ${molesAcid.toFixed(5)} mol<br>
+                2. Mole Ratio: ${molesAcid.toFixed(5)} mol ${d.acid} &times; ${frac(d.cB+' mol '+d.base, d.cA+' mol '+d.acid)} = ${molesBase.toFixed(5)} mol ${d.base}<br>
+                3. Final Volume: ${frac(molesBase.toFixed(5) + ' mol', d.unknownVal + ' M')} &times; 1000 = <b>${toSigFigs(finalVol, sf)} mL ${d.base}</b>
             `;
         } else {
-            const molesBase = (d.knownM * (d.unknownVal / 1000)).toFixed(5);
-            const molesAcid = (molesBase * (d.cA / d.cB)).toFixed(5);
-            const finalM = (molesAcid / (d.knownV / 1000)).toFixed(3);
+            const molesBase = (d.knownM * (d.unknownVal / 1000));
+            const molesAcid = (molesBase * (d.cA / d.cB));
+            const finalM = (molesAcid / (d.knownV / 1000));
+
             mathSteps = `
-                1. Moles ${d.base}: (${d.knownM} M) &times; (${(d.unknownVal/1000).toFixed(4)} L) = ${molesBase} mol<br>
-                2. Mole Ratio: ${molesBase} mol ${d.base} &times; ${frac(d.cA+' mol '+d.acid, d.cB+' mol '+d.base)} = ${molesAcid} mol ${d.acid}<br>
-                3. Final Molarity: ${frac(molesAcid + ' mol', (d.knownV/1000).toFixed(4) + ' L')} = <b>${finalM} M ${d.acid}</b>
+                1. Moles ${d.base}: (${d.knownM} M) &times; (${(d.unknownVal/1000).toFixed(4)} L) = ${molesBase.toFixed(5)} mol<br>
+                2. Mole Ratio: ${molesBase.toFixed(5)} mol ${d.base} &times; ${frac(d.cA+' mol '+d.acid, d.cB+' mol '+d.base)} = ${molesAcid.toFixed(5)} mol ${d.acid}<br>
+                3. Final Molarity: ${frac(molesAcid.toFixed(5) + ' mol', (d.knownV/1000).toFixed(4) + ' L')} = <b>${toSigFigs(finalM, sf)} M ${d.acid}</b>
             `;
         }
-        ad.innerHTML = `<strong>Titration Solution:</strong><div class="setup-container" style="display:block;">${formatSub(mathSteps)}</div>`;
+        ad.innerHTML = `<strong>Titration Solution:</strong><div class="setup-container" style="display:block;">${formatSub(mathSteps)}</div><br><small><i>Rounded to ${sf} sig figs based on ${d.type === 'titration' ? 'molarity' : 'input'}.</i></small>`;
         return;
     }
 
-    // New Randomized Stoichiometry Answer Logic
+    // 2. Standard Stoichiometry Logic with Sig Figs and Mass-Mass
     const ratioFrac = frac(`${d.coeffB} mol ${d.nameB}`, `${d.coeffA} mol ${d.nameA}`);
 
     if (d.mode === 'mole-mole') {
-        const ans = (v * (d.coeffB / d.coeffA)).toFixed(3);
-        steps = `${v} mol ${d.nameA} &times; ${ratioFrac} = <b>${ans} mol ${d.nameB}</b>`;
+        const ans = v * (d.coeffB / d.coeffA);
+        steps = `${v} mol ${d.nameA} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
     } 
     else if (d.mode === 'mole-mass') {
         if (d.direction === 0) { // Mol to Gram
-            const ans = (v * (d.coeffB / d.coeffA) * d.massB).toFixed(2);
-            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac(d.massB + ' g', '1 mol')} = <b>${ans} g ${d.nameB}</b>`;
+            const ans = v * (d.coeffB / d.coeffA) * d.massB;
+            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac(d.massB + ' g', '1 mol')} = <b>${toSigFigs(ans, sf)} g ${d.nameB}</b>`;
         } else { // Gram to Mol
-            const ans = (v / d.massA * (d.coeffB / d.coeffA)).toFixed(3);
-            steps = `${v} g ${d.nameA} &times; ${frac('1 mol', d.massA + ' g')} &times; ${ratioFrac} = <b>${ans} mol ${d.nameB}</b>`;
+            const ans = v / d.massA * (d.coeffB / d.coeffA);
+            steps = `${v} g ${d.nameA} &times; ${frac('1 mol', d.massA + ' g')} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
         }
     }
     else if (d.mode === 'mole-part') {
         if (d.direction === 0) { // Mol to Particles
-            const ans = (v * (d.coeffB / d.coeffA) * 6.022).toFixed(2);
-            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${ans}&times;10²³ units</b>`;
+            const ans = v * (d.coeffB / d.coeffA) * 6.022;
+            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${toSigFigs(ans, sf)}&times;10²³ units</b>`;
         } else { // Particles to Mol
-            const ans = (v / 6.022 * (d.coeffB / d.coeffA)).toFixed(3);
-            steps = `${v}&times;10²³ units &times; ${frac('1 mol', '6.022&times;10²³ units')} &times; ${ratioFrac} = <b>${ans} mol ${d.nameB}</b>`;
+            const ans = v / 6.022 * (d.coeffB / d.coeffA);
+            steps = `${v}&times;10²³ units &times; ${frac('1 mol', '6.022&times;10²³ units')} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
         }
     }
     else if (d.mode === 'mole-vol') {
         if (d.direction === 0) { // Mol to Volume
-            const ans = (v * (d.coeffB / d.coeffA) * 22.4).toFixed(2);
-            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('22.4 L', '1 mol')} = <b>${ans} L ${d.nameB}</b>`;
+            const ans = v * (d.coeffB / d.coeffA) * 22.4;
+            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('22.4 L', '1 mol')} = <b>${toSigFigs(ans, sf)} L ${d.nameB}</b>`;
         } else { // Volume to Mol
-            const ans = (v / 22.4 * (d.coeffB / d.coeffA)).toFixed(3);
-            steps = `${v} L ${d.nameA} &times; ${frac('1 mol', '22.4 L')} &times; ${ratioFrac} = <b>${ans} mol ${d.nameB}</b>`;
+            const ans = v / 22.4 * (d.coeffB / d.coeffA);
+            steps = `${v} L ${d.nameA} &times; ${frac('1 mol', '22.4 L')} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
         }
     }
+    else if (d.mode === 'mass-mass') {
+        const ans = (v / d.massA) * (d.coeffB / d.coeffA) * d.massB;
+        steps = `${v} g ${d.nameA} &times; ${frac('1 mol', d.massA + ' g')} &times; ${ratioFrac} &times; ${frac(d.massB + ' g', '1 mol')} = <b>${toSigFigs(ans, sf)} g ${d.nameB}</b>`;
+    }
 
-    ad.innerHTML = `<strong>Step-by-Step Setup:</strong><div class="setup-container">${formatSub(steps)}</div>`;
+    ad.innerHTML = `<strong>Step-by-Step Setup:</strong><div class="setup-container">${formatSub(steps)}</div><br><small><i>Rounded to ${sf} sig figs based on input value.</i></small>`;
 }
 </script>
 
