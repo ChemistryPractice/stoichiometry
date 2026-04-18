@@ -66,6 +66,25 @@
 </div>
 
 <script>
+    function toSigFigs(num, sigFigs) {
+    if (num == 0) return 0;
+    const d = Math.ceil(Math.log10(num < 0 ? -num : num));
+    const power = sigFigs - d;
+    const magnitude = Math.pow(10, power);
+    const shifted = Math.round(num * magnitude);
+    const result = shifted / magnitude;
+    
+    // This ensures we keep trailing zeros (e.g., 5.00 instead of 5)
+    return result.toFixed(Math.max(0, power));
+}
+
+    // Helper to count sig figs of input (simple version for class use)
+    function countSigFigs(str) {
+        let s = str.replace('.', '');
+    // Remove leading zeros
+        s = s.replace(/^0+/, '');
+        return s.length;
+}
     const data = {
         elements: { "H": 1.01, "O": 16.00, "Na": 22.99, "Cl": 35.45, "C": 12.01, "N": 14.01, "S": 32.06, "K": 39.10, "Ca": 40.08, "Mg": 24.31 },
         equations: [
