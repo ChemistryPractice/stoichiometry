@@ -91,7 +91,10 @@
         document.getElementById('answer-display').classList.remove('visible');
     }
 
-    function formatSub(text) { return text.replace(/(\d+)/g, '<sub>$1</sub>'); }
+    // This regex only targets numbers that follow a letter or a ')'
+function formatSub(text) { 
+    return text.replace(/([A-Za-z\)])(\d+)/g, '$1<sub>$2</sub>'); 
+}
 
     function generateProblem() {
         if (!currentMode) return alert("Select a type from the sidebar first!");
