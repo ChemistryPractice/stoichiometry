@@ -39,10 +39,10 @@
 
 <div class="sidebar">
     <h2>Stoichiometry</h2>
-    <button class="side-btn" onclick="setMode('mole-mole', this)">Mole-Mole</button>
-    <button class="side-btn" onclick="setMode('mole-mass', this)">Mole-Mass</button>
-    <button class="side-btn" onclick="setMode('mole-part', this)">Mole-Particles</button>
-    <button class="side-btn" onclick="setMode('mole-vol', this)">Mole-Volume (STP)</button>
+    <button class="side-btn" onclick="setMode('mole-mole', this)">Mole ↔ Mole</button>
+    <button class="side-btn" onclick="setMode('mole-mass', this)">Mole ↔ Mass</button>
+    <button class="side-btn" onclick="setMode('mole-part', this)">Mole ↔ Particles</button>
+    <button class="side-btn" onclick="setMode('mole-vol', this)">Mole ↔ Volume (STP)</button>
     <button class="side-btn" onclick="setMode('titration', this)">Titration</button>
 </div>
 
@@ -128,137 +128,157 @@ function formatSub(text) {
 }
 
     function generateProblem() {
-        if (!currentMode) return alert("Select a type from the sidebar first!");
-        document.getElementById('answer-display').classList.remove('visible');
-        
-        const eqSet = data.equations[Math.floor(Math.random() * data.equations.length)];
-        const val = (Math.random() * 5 + 1).toFixed(2);
-        
-        if (currentMode === 'titration') {
-    const t = data.titrations[Math.floor(Math.random() * data.titrations.length)];
-    const solveForVol = Math.random() > 0.5; // Randomly decide to solve for V or M
+    if (!currentMode) return alert("Select a type from the sidebar first!");
+    document.getElementById('answer-display').classList.remove('visible');
     
-    // Randomize known values
-    const knownM = (Math.random() * 0.4 + 0.1).toFixed(3); // 0.100 - 0.500 M
-    const knownV = (Math.random() * 30 + 10).toFixed(2);   // 10.00 - 40.00 mL
-    const unknownVal = (Math.random() * 0.4 + 0.1).toFixed(3); // The other M or V
+    // 1. Handle Titration separately to preserve its working logic
+    if (currentMode === 'titration') {
+        const t = data.titrations[Math.floor(Math.random() * data.titrations.length)];
+        const solveForVol = Math.random() > 0.5;
+        const knownM = (Math.random() * 0.4 + 0.1).toFixed(3);
+        const knownV = (Math.random() * 30 + 10).toFixed(2);
+        const unknownVal = (Math.random() * 0.4 + 0.1).toFixed(3);
+        
+        currentData = { ...t, knownM, knownV, unknownVal, solveForVol, type: 'titration' };
+        document.getElementById('equation-display').innerHTML = formatSub(t.eq);
+        
+        if (solveForVol) {
+            document.getElementById('problem-text').innerHTML = 
+                `What <b>volume (mL)</b> of ${unknownVal} M ${t.base} is needed to completely neutralize ${knownV} mL of ${knownM} M ${t.acid}?`;
+        } else {
+            document.getElementById('problem-text').innerHTML = 
+                `What is the <b>molarity</b> of the ${t.acid} solution if ${knownV} mL of it is neutralized by ${unknownVal} mL of ${knownM} M ${t.base}?`;
+        }
+        return;
+    }
+
+    // 2. Standard Stoichiometry Logic with Randomization
+    const eqSet = data.equations[Math.floor(Math.random() * data.equations.length)];
+    const val = (Math.random() * 5 + 1).toFixed(2);
     
-    currentData = { 
-        ...t, 
-        knownM, knownV, unknownVal, 
-        solveForVol, 
-        type: 'titration' 
+    let idxA = Math.floor(Math.random() * eqSet.names.length);
+    let idxB = Math.floor(Math.random() * eqSet.names.length);
+    while(idxA === idxB) idxB = Math.floor(Math.random() * eqSet.names.length);
+
+    // 0: Start with Moles, End with Unit | 1: Start with Unit, End with Moles
+    const direction = Math.floor(Math.random() * 2); 
+
+    currentData = {
+        eq: eqSet.eq,
+        nameA: eqSet.names[idxA],
+        nameB: eqSet.names[idxB],
+        coeffA: eqSet.ratio[idxA],
+        coeffB: eqSet.ratio[idxB],
+        massA: eqSet.masses[idxA],
+        massB: eqSet.masses[idxB],
+        inputVal: val,
+        direction: direction,
+        mode: currentMode
     };
 
-    document.getElementById('equation-display').innerHTML = formatSub(t.eq);
+    document.getElementById('equation-display').innerHTML = formatSub(currentData.eq);
     
-    if (solveForVol) {
-        document.getElementById('problem-text').innerHTML = 
-            `What <b>volume (mL)</b> of ${unknownVal} M ${t.base} is needed to completely neutralize ${knownV} mL of ${knownM} M ${t.acid}?`;
-    } else {
-        document.getElementById('problem-text').innerHTML = 
-            `What is the <b>molarity</b> of the ${t.acid} solution if ${knownV} mL of it is neutralized by ${unknownVal} mL of ${knownM} M ${t.base}?`;
+    let pText = "";
+    const nameA = formatSub(currentData.nameA);
+    const nameB = formatSub(currentData.nameB);
+
+    switch(currentMode) {
+        case 'mole-mole': 
+            pText = `If <b>${val} moles</b> of ${nameA} react, how many <b>moles</b> of ${nameB} are involved?`; 
+            break;
+        case 'mole-mass': 
+            pText = direction === 0 
+                ? `How many <b>grams</b> of ${nameB} are involved if <b>${val} moles</b> of ${nameA} react?`
+                : `How many <b>moles</b> of ${nameB} are involved if <b>${val} grams</b> of ${nameA} react?`;
+            break;
+        case 'mole-part': 
+            pText = direction === 0 
+                ? `How many <b>formula units</b> of ${nameB} are involved if <b>${val} moles</b> of ${nameA} react?`
+                : `How many <b>moles</b> of ${nameB} are involved if <b>${val} x 10²³ units</b> of ${nameA} react?`;
+            break;
+        case 'mole-vol': 
+            pText = direction === 0 
+                ? `What <b>volume (L)</b> of ${nameB} gas (STP) is involved if <b>${val} moles</b> of ${nameA} react?`
+                : `How many <b>moles</b> of ${nameB} are involved if <b>${val} Liters</b> of ${nameA} gas react at STP?`;
+            break;
     }
-    return;
+    document.getElementById('problem-text').innerHTML = pText;
 }
 
-        // Standard Stoich
-        const idxA = Math.floor(Math.random() * eqSet.names.length);
-        let idxB = Math.floor(Math.random() * eqSet.names.length);
-        while(idxA === idxB) idxB = Math.floor(Math.random() * eqSet.names.length);
+function frac(n, d) { return `<div class="fraction"><span class="numerator">${n}</span><span class="denominator">${d}</span></div>`; }
 
-        currentData = {
-            eq: eqSet.eq,
-            nameA: eqSet.names[idxA],
-            nameB: eqSet.names[idxB],
-            coeffA: eqSet.ratio[idxA],
-            coeffB: eqSet.ratio[idxB],
-            massA: eqSet.masses[idxA],
-            massB: eqSet.masses[idxB],
-            inputVal: val
-        };
-
-        document.getElementById('equation-display').innerHTML = formatSub(currentData.eq);
-        
-        let pText = "";
-        switch(currentMode) {
-            case 'mole-mole': pText = `If <b>${val} moles</b> of ${formatSub(currentData.nameA)} react, how many <b>moles</b> of ${formatSub(currentData.nameB)} are produced/consumed?`; break;
-            case 'mole-mass': pText = `If <b>${val} moles</b> of ${formatSub(currentData.nameA)} react, what <b>mass (grams)</b> of ${formatSub(currentData.nameB)} is involved?`; break;
-            case 'mole-part': pText = `If <b>${val} moles</b> of ${formatSub(currentData.nameA)} react, how many <b>formula units</b> of ${formatSub(currentData.nameB)} are involved?`; break;
-            case 'mole-vol': pText = `If <b>${val} moles</b> of ${formatSub(currentData.nameA)} react, what <b>volume (L)</b> of ${formatSub(currentData.nameB)} gas is produced at STP?`; break;
-        }
-        document.getElementById('problem-text').innerHTML = pText;
-    }
-
-    function frac(n, d) { return `<div class="fraction"><span class="numerator">${n}</span><span class="denominator">${d}</span></div>`; }
-
-    function showAnswer() {
-        // If no problem has been generated yet, just exit
-        if (!currentData.eq && currentData.type !== 'titration') return;
-        
-        const ad = document.getElementById('answer-display');
-        ad.classList.add('visible');
-        let steps = "";
-
-        // Inside your showAnswer() function, replace the titration block:
-if (currentData.type === 'titration') {
+function showAnswer() {
+    if (!currentData.eq && currentData.type !== 'titration') return;
+    
+    const ad = document.getElementById('answer-display');
+    ad.classList.add('visible');
     const d = currentData;
-    let result = "";
-    let mathSteps = "";
+    const v = d.inputVal;
+    let steps = "";
 
-    if (d.solveForVol) {
-        // Solving for Volume of Base (Vb)
-        // Moles Acid = Ma * Va
-        const molesAcid = (d.knownM * (d.knownV / 1000)).toFixed(5);
-        // Moles Base = Moles Acid * (coeffBase / coeffAcid)
-        const molesBase = (molesAcid * (d.cB / d.cA)).toFixed(5);
-        // Vol Base = Moles Base / Mb
-        const finalVol = (molesBase / d.unknownVal * 1000).toFixed(2);
-
-        mathSteps = `
-            1. Moles ${d.acid}: (${d.knownM} M) &times; (0.0${d.knownV.replace('.','')} L) = ${molesAcid} mol<br>
-            2. Mole Ratio: ${molesAcid} mol ${d.acid} &times; ${frac(d.cB+' mol '+d.base, d.cA+' mol '+d.acid)} = ${molesBase} mol ${d.base}<br>
-            3. Final Volume: ${frac(molesBase + ' mol', d.unknownVal + ' M')} &times; 1000 = <b>${finalVol} mL ${d.base}</b>
-        `;
-    } else {
-        // Solving for Molarity of Acid (Ma)
-        const molesBase = (d.knownM * (d.unknownVal / 1000)).toFixed(5);
-        const molesAcid = (molesBase * (d.cA / d.cB)).toFixed(5);
-        const finalM = (molesAcid / (d.knownV / 1000)).toFixed(3);
-
-        mathSteps = `
-            1. Moles ${d.base}: (${d.knownM} M) &times; (${(d.unknownVal/1000).toFixed(4)} L) = ${molesBase} mol<br>
-            2. Mole Ratio: ${molesBase} mol ${d.base} &times; ${frac(d.cA+' mol '+d.acid, d.cB+' mol '+d.base)} = ${molesAcid} mol ${d.acid}<br>
-            3. Final Molarity: ${frac(molesAcid + ' mol', (d.knownV/1000).toFixed(4) + ' L')} = <b>${finalM} M ${d.acid}</b>
-        `;
+    // Preservation of Titration Answer Logic
+    if (d.type === 'titration') {
+        let mathSteps = "";
+        if (d.solveForVol) {
+            const molesAcid = (d.knownM * (d.knownV / 1000)).toFixed(5);
+            const molesBase = (molesAcid * (d.cB / d.cA)).toFixed(5);
+            const finalVol = (molesBase / d.unknownVal * 1000).toFixed(2);
+            mathSteps = `
+                1. Moles ${d.acid}: (${d.knownM} M) &times; (0.0${d.knownV.replace('.','')} L) = ${molesAcid} mol<br>
+                2. Mole Ratio: ${molesAcid} mol ${d.acid} &times; ${frac(d.cB+' mol '+d.base, d.cA+' mol '+d.acid)} = ${molesBase} mol ${d.base}<br>
+                3. Final Volume: ${frac(molesBase + ' mol', d.unknownVal + ' M')} &times; 1000 = <b>${finalVol} mL ${d.base}</b>
+            `;
+        } else {
+            const molesBase = (d.knownM * (d.unknownVal / 1000)).toFixed(5);
+            const molesAcid = (molesBase * (d.cA / d.cB)).toFixed(5);
+            const finalM = (molesAcid / (d.knownV / 1000)).toFixed(3);
+            mathSteps = `
+                1. Moles ${d.base}: (${d.knownM} M) &times; (${(d.unknownVal/1000).toFixed(4)} L) = ${molesBase} mol<br>
+                2. Mole Ratio: ${molesBase} mol ${d.base} &times; ${frac(d.cA+' mol '+d.acid, d.cB+' mol '+d.base)} = ${molesAcid} mol ${d.acid}<br>
+                3. Final Molarity: ${frac(molesAcid + ' mol', (d.knownV/1000).toFixed(4) + ' L')} = <b>${finalM} M ${d.acid}</b>
+            `;
+        }
+        ad.innerHTML = `<strong>Titration Solution:</strong><div class="setup-container" style="display:block;">${formatSub(mathSteps)}</div>`;
+        return;
     }
 
-    ad.innerHTML = `<strong>Titration Solution:</strong><div class="setup-container" style="display:block;">${formatSub(mathSteps)}</div>`;
-    return;
+    // New Randomized Stoichiometry Answer Logic
+    const ratioFrac = frac(`${d.coeffB} mol ${d.nameB}`, `${d.coeffA} mol ${d.nameA}`);
+
+    if (d.mode === 'mole-mole') {
+        const ans = (v * (d.coeffB / d.coeffA)).toFixed(3);
+        steps = `${v} mol ${d.nameA} &times; ${ratioFrac} = <b>${ans} mol ${d.nameB}</b>`;
+    } 
+    else if (d.mode === 'mole-mass') {
+        if (d.direction === 0) { // Mol to Gram
+            const ans = (v * (d.coeffB / d.coeffA) * d.massB).toFixed(2);
+            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac(d.massB + ' g', '1 mol')} = <b>${ans} g ${d.nameB}</b>`;
+        } else { // Gram to Mol
+            const ans = (v / d.massA * (d.coeffB / d.coeffA)).toFixed(3);
+            steps = `${v} g ${d.nameA} &times; ${frac('1 mol', d.massA + ' g')} &times; ${ratioFrac} = <b>${ans} mol ${d.nameB}</b>`;
+        }
+    }
+    else if (d.mode === 'mole-part') {
+        if (d.direction === 0) { // Mol to Particles
+            const ans = (v * (d.coeffB / d.coeffA) * 6.022).toFixed(2);
+            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${ans}&times;10²³ units</b>`;
+        } else { // Particles to Mol
+            const ans = (v / 6.022 * (d.coeffB / d.coeffA)).toFixed(3);
+            steps = `${v}&times;10²³ units &times; ${frac('1 mol', '6.022&times;10²³ units')} &times; ${ratioFrac} = <b>${ans} mol ${d.nameB}</b>`;
+        }
+    }
+    else if (d.mode === 'mole-vol') {
+        if (d.direction === 0) { // Mol to Volume
+            const ans = (v * (d.coeffB / d.coeffA) * 22.4).toFixed(2);
+            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('22.4 L', '1 mol')} = <b>${ans} L ${d.nameB}</b>`;
+        } else { // Volume to Mol
+            const ans = (v / 22.4 * (d.coeffB / d.coeffA)).toFixed(3);
+            steps = `${v} L ${d.nameA} &times; ${frac('1 mol', '22.4 L')} &times; ${ratioFrac} = <b>${ans} mol ${d.nameB}</b>`;
+        }
+    }
+
+    ad.innerHTML = `<strong>Step-by-Step Setup:</strong><div class="setup-container">${formatSub(steps)}</div>`;
 }
-
-        const v = currentData.inputVal;
-        const ratio = frac(`${currentData.coeffB} mol ${currentData.nameB}`, `${currentData.coeffA} mol ${currentData.nameA}`);
-
-        if (currentMode === 'mole-mole') {
-            const ans = (v * (currentData.coeffB / currentData.coeffA)).toFixed(3);
-            steps = `${v} mol ${currentData.nameA} &times; ${ratio} = <b>${ans} mol ${currentData.nameB}</b>`;
-        } 
-        else if (currentMode === 'mole-mass') {
-            const ans = (v * (currentData.coeffB / currentData.coeffA) * currentData.massB).toFixed(2);
-            steps = `${v} mol ${currentData.nameA} &times; ${ratio} &times; ${frac(currentData.massB + ' g', '1 mol')} = <b>${ans} g ${currentData.nameB}</b>`;
-        }
-        else if (currentMode === 'mole-part') {
-            const ans = (v * (currentData.coeffB / currentData.coeffA) * 6.022).toFixed(2);
-            steps = `${v} mol ${currentData.nameA} &times; ${ratio} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${ans}&times;10²³ units</b>`;
-        }
-        else if (currentMode === 'mole-vol') {
-            const ans = (v * (currentData.coeffB / currentData.coeffA) * 22.4).toFixed(2);
-            steps = `${v} mol ${currentData.nameA} &times; ${ratio} &times; ${frac('22.4 L', '1 mol')} = <b>${ans} L ${currentData.nameB}</b>`;
-        }
-
-        ad.innerHTML = `<strong>Step-by-Step Setup:</strong><div class="setup-container">${formatSub(steps)}</div>`;
-    }
 </script>
 
 </body>
