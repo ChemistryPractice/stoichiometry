@@ -1,1 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stoichiometry Master</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e67e22; --error: #c0392b; --bg: #f4f7f6; --sidebar: #34495e; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; min-height: 100vh; }
+        
+        /* Sidebar Styles */
+        .sidebar { width: 220px; background: var(--sidebar); color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 20px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+        .side-btn { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 12px; text-align: left; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .side-btn:hover, .side-btn.active { background: var(--accent); border-color: var(--accent); }
 
+        /* Main Content */
+        .main-content { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 800px; }
+        
+        #equation-display { font-size: 1.8rem; font-weight: bold; margin: 20px 0; text-align: center; letter-spacing: 1px; color: var(--primary); }
+        .problem-box { background: #f9f9f9; padding: 20px; border-radius: 15px; border-left: 5px solid var(--accent); margin: 20px 0; font-size: 1.1rem; line-height: 1.5; }
+        
+        .gen-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1rem; margin-bottom: 10px; }
+        .check-btn { background: var(--error); color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; opacity: 0.9; }
+        
+        #answer-display { margin-top: 20px; padding: 20px; border-radius: 10px; background: #fff5f5; color: #2c3e50; display: none; border: 1px solid #fab1a0; }
+        #answer-display.visible { display: block; }
+
+        /* Fraction Styling */
+        .setup-container { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-family: 'Courier New', monospace; margin-top: 15px; }
+        .fraction { display: inline-block; vertical-align: middle; text-align: center; margin: 0 5px; }
+        .numerator { display: block; border-bottom: 2px solid var(--primary); padding: 0 5px; }
+        .denominator { display: block; padding: 0 5px; }
+        sub { font-size: 0.7em; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Stoichiometry</h2>
+    <button class="side-btn" onclick="setMode('mole-mole', this)">Mole-Mole</button>
+    <button class="side-btn" onclick="setMode('mole-mass', this)">Mole-Mass</button>
+    <button class="side-btn" onclick="setMode('mole-part', this)">Mole-Particles</button>
+    <button class="side-btn" onclick="setMode('mole-vol', this)">Mole-Volume (STP)</button>
+    <button class="side-btn" onclick="setMode('titration', this)">Titration</button>
+</div>
+
+<div class="main-content">
+    <div class="card">
+        <h1 id="title-display">Select a Category</h1>
+        <button class="gen-btn" onclick="generateProblem()">Generate New Problem</button>
+        
+        <div id="equation-display">Select a type from the left...</div>
+        
+        <div id="problem-text" class="problem-box">
+            Please select a problem type from the sidebar to begin your practice.
+        </div>
+
+        <button class="check-btn" onclick="showAnswer()">Show Step-by-Step Answer</button>
+        
+        <div id="answer-display"></div>
+    </div>
+</div>
+
+<script>
+    const data = {
+        elements: { "H": 1.01, "O": 16.00, "Na": 22.99, "Cl": 35.45, "C": 12.01, "N": 14.01, "S": 32.06, "K": 39.10, "Ca": 40.08, "Mg": 24.31 },
+        equations: [
+            { eq: "2H₂ + O₂ → 2H₂O", ratio: [2, 1, 2], names: ["H₂", "O₂", "H₂O"], masses: [2.02, 32.00, 18.02] },
+            { eq: "N₂ + 3H₂ → 2NH₃", ratio: [1, 3, 2], names: ["N₂", "H₂", "NH₃"], masses: [28.02, 6.06, 17.03] },
+            { eq: "CH₄ + 2O₂ → CO₂ + 2H₂O", ratio: [1, 2, 1, 2], names: ["CH₄", "O₂", "CO₂", "H₂O"], masses: [16.04, 32.00, 44.01, 18.02] },
+            { eq: "2Na + Cl₂ → 2NaCl", ratio: [2, 1, 2], names: ["Na", "Cl₂", "NaCl"], masses: [22.99, 70.90, 58.44] },
+            { eq: "CaCO₃ → CaO + CO₂", ratio: [1, 1, 1], names: ["CaCO₃", "CaO", "CO₂"], masses: [100.09, 56.08, 44.01] }
+        ],
+        titrations: [
+            { acid: "HCl", base: "NaOH", ratio: [1, 1] },
+            { acid: "H₂SO₄", base: "NaOH", ratio: [1, 2] },
+            { acid: "HCl", base: "Ca(OH)₂", ratio: [2, 1] }
+        ]
+    };
+
+    let currentMode = '';
+    let currentData = {};
+
+    function setMode(mode, btn) {
+        currentMode = mode;
+        document.querySelectorAll('.side-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('title-display').innerText = btn.innerText;
+        document.getElementById('answer-display').classList.remove('visible');
+    }
+
+    function formatSub(text) { return text.replace(/(\d+)/g, '<sub>$1</sub>'); }
+
+    function generateProblem() {
+        if (!currentMode) return alert("Select a type from the sidebar first!");
+        document.getElementById('answer-display').classList.remove('visible');
+        
+        const eqSet = data.equations[Math.floor(Math.random() * data.equations.length)];
+        const val = (Math.random() * 5 + 1).toFixed(2);
+        
+        if (currentMode === 'titration') {
+            const t = data.titrations[Math.floor(Math.random() * data.titrations.length)];
+            const solveForVol = Math.random() > 0.5;
+            const knownM = (Math.random() * 0.5 + 0.1).toFixed(3);
+            const knownV = (Math.random() * 40 + 10).toFixed(2);
+            const unknownM = (Math.random() * 0.5 + 0.1).toFixed(3);
+            
+            currentData = { ...t, knownM, knownV, unknownM, solveForVol, type: 'titration' };
+            document.getElementById('equation-display').innerHTML = `${t.acid} + ${t.base} Reaction`;
+            document.getElementById('problem-text').innerHTML = solveForVol 
+                ? `What <b>volume (mL)</b> of ${unknownM} M ${t.base} is needed to neutralize ${knownV} mL of ${knownM} M ${t.acid}?`
+                : `What is the <b>molarity</b> of ${t.acid} if ${knownV} mL of it is neutralized by ${(Math.random()*30+10).toFixed(2)} mL of ${knownM} M ${t.base}?`;
+            return;
+        }
+
+        // Standard Stoich
+        const idxA = Math.floor(Math.random() * eqSet.names.length);
+        let idxB = Math.floor(Math.random() * eqSet.names.length);
+        while(idxA === idxB) idxB = Math.floor(Math.random() * eqSet.names.length);
+
+        currentData = {
+            eq: eqSet.eq,
+            nameA: eqSet.names[idxA],
+            nameB: eqSet.names[idxB],
+            coeffA: eqSet.ratio[idxA],
+            coeffB: eqSet.ratio[idxB],
+            massA: eqSet.masses[idxA],
+            massB: eqSet.masses[idxB],
+            inputVal: val
+        };
+
+        document.getElementById('equation-display').innerHTML = formatSub(currentData.eq);
+        
+        let pText = "";
+        switch(currentMode) {
+            case 'mole-mole': pText = `If <b>${val} moles</b> of ${formatSub(currentData.nameA)} react, how many <b>moles</b> of ${formatSub(currentData.nameB)} are produced/consumed?`; break;
+            case 'mole-mass': pText = `If <b>${val} moles</b> of ${formatSub(currentData.nameA)} react, what <b>mass (grams)</b> of ${formatSub(currentData.nameB)} is involved?`; break;
+            case 'mole-part': pText = `If <b>${val} moles</b> of ${formatSub(currentData.nameA)} react, how many <b>formula units</b> of ${formatSub(currentData.nameB)} are involved?`; break;
+            case 'mole-vol': pText = `If <b>${val} moles</b> of ${formatSub(currentData.nameA)} react, what <b>volume (L)</b> of ${formatSub(currentData.nameB)} gas is produced at STP?`; break;
+        }
+        document.getElementById('problem-text').innerHTML = pText;
+    }
+
+    function frac(n, d) { return `<div class="fraction"><span class="numerator">${n}</span><span class="denominator">${d}</span></div>`; }
+
+    function showAnswer() {
+        const ad = document.getElementById('answer-display');
+        ad.classList.add('visible');
+        let steps = "";
+
+        if (currentData.type === 'titration') {
+            steps = `1. Write balanced equation.<br>2. Find moles of known.<br>3. Use mole ratio.<br>4. Solve for unknown.`;
+            ad.innerHTML = `<strong>Titration Solution:</strong><br>${steps}`;
+            return;
+        }
+
+        const v = currentData.inputVal;
+        const ratio = frac(`${currentData.coeffB} mol ${currentData.nameB}`, `${currentData.coeffA} mol ${currentData.nameA}`);
+
+        if (currentMode === 'mole-mole') {
+            const ans = (v * (currentData.coeffB / currentData.coeffA)).toFixed(3);
+            steps = `${v} mol ${currentData.nameA} &times; ${ratio} = <b>${ans} mol ${currentData.nameB}</b>`;
+        } 
+        else if (currentMode === 'mole-mass') {
+            const ans = (v * (currentData.coeffB / currentData.coeffA) * currentData.massB).toFixed(2);
+            steps = `${v} mol ${currentData.nameA} &times; ${ratio} &times; ${frac(currentData.massB + ' g', '1 mol')} = <b>${ans} g ${currentData.nameB}</b>`;
+        }
+        else if (currentMode === 'mole-part') {
+            const ans = (v * (currentData.coeffB / currentData.coeffA) * 6.022).toFixed(2);
+            steps = `${v} mol ${currentData.nameA} &times; ${ratio} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${ans}&times;10²³ units</b>`;
+        }
+        else if (currentMode === 'mole-vol') {
+            const ans = (v * (currentData.coeffB / currentData.coeffA) * 22.4).toFixed(2);
+            steps = `${v} mol ${currentData.nameA} &times; ${ratio} &times; ${frac('22.4 L', '1 mol')} = <b>${ans} L ${currentData.nameB}</b>`;
+        }
+
+        ad.innerHTML = `<strong>Step-by-Step Setup:</strong><div class="setup-container">${formatSub(steps)}</div>`;
+    }
+</script>
+
+</body>
+</html>
