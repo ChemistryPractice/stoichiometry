@@ -262,12 +262,19 @@ function showAnswer() {
     const d = currentData;
     const v = d.inputVal;
     
-    // Determine sig figs from input (Titration uses knownM, Stoich uses inputVal)
-    const sf = d.type === 'titration' ? countSigFigs(d.knownM.toString()) : countSigFigs(v.toString());
+    // Determine sig figs from input (Titration uses knownM, Stoich uses inputVal, Limiting uses amt1)
+    let sf;
+    if (d.type === 'titration') {
+        sf = countSigFigs(d.knownM.toString());
+    } else if (d.type === 'limiting') {
+        sf = countSigFigs(d.amt1.toString());
+    } else {
+        sf = countSigFigs(v.toString());
+    }
     
     let steps = "";
 
-    // 1. Titration Logic with Sig Figs
+    // 1. Titration Logic
     if (d.type === 'titration') {
         let mathSteps = "";
         if (d.solveForVol) {
@@ -291,11 +298,60 @@ function showAnswer() {
                 3. Final Molarity: ${frac(molesAcid.toFixed(5) + ' mol', (d.knownV/1000).toFixed(4) + ' L')} = <b>${toSigFigs(finalM, sf)} M ${d.acid}</b>
             `;
         }
-        ad.innerHTML = `<strong>Titration Solution:</strong><div class="setup-container" style="display:block;">${formatSub(mathSteps)}</div><br><small><i>Rounded to ${sf} sig figs based on ${d.type === 'titration' ? 'molarity' : 'input'}.</i></small>`;
+        ad.innerHTML = `<strong>Titration Solution:</strong><div class="setup-container" style="display:block;">${formatSub(mathSteps)}</div><br><small><i>Rounded to ${sf} sig figs based on molarity.</i></small>`;
         return;
     }
 
-    // 2. Standard Stoichiometry Logic with Sig Figs and Mass-Mass
+    // 2. Limiting Reactant Logic
+    if (d.type === 'limiting') {
+        const mol1 = d.isMass ? d.amt1 / d.mass1 : d.amt1;
+        const mol2 = d.isMass ? d.amt2 / d.mass2 : d.amt2;
+
+        const yieldFrom1 = mol1 / d.coeff1;
+        const yieldFrom2 = mol2 / d.coeff2;
+
+        const lrIdx = yieldFrom1 < yieldFrom2 ? 1 : 2;
+        const lrName = lrIdx === 1 ? d.name1 : d.name2;
+        const erName = lrIdx === 1 ? d.name2 : d.name1;
+        
+        let stepText = `<b>Step 1: Find the Limiting Reactant</b><br>`;
+        stepText += `${d.name1}: ${d.isMass ? d.amt1 + 'g / ' + d.mass1 + 'g/mol = ' : ''}${mol1.toFixed(3)} mol / ${d.coeff1} coeff = ${yieldFrom1.toFixed(3)}<br>`;
+        stepText += `${d.name2}: ${d.isMass ? d.amt2 + 'g / ' + d.mass2 + 'g/mol = ' : ''}${mol2.toFixed(3)} mol / ${d.coeff2} coeff = ${yieldFrom2.toFixed(3)}<br>`;
+        stepText += `Lower ratio is <b>${lrName}</b> (Limiting).<br><br>`;
+
+        if (d.subType === 0) stepText += `Final Answer: The limiting reactant is <b>${lrName}</b>.`;
+        else if (d.subType === 1) stepText += `Final Answer: The excess reactant is <b>${erName}</b>.`;
+        else if (d.subType === 2) {
+            const lrMol = lrIdx === 1 ? mol1 : mol2;
+            const lrCoeff = lrIdx === 1 ? d.coeff1 : d.coeff2;
+            let finalYield = lrMol * (d.prodCoeff / lrCoeff);
+            if (d.isMass) finalYield *= d.prodMass;
+            
+            stepText += `<b>Step 2: Calculate Product from LR</b><br>`;
+            stepText += `${lrMol.toFixed(3)} mol ${lrName} &times; ${frac(d.prodCoeff + ' mol ' + d.prodName, lrCoeff + ' mol ' + lrName)} ${d.isMass ? '&times; ' + d.prodMass + 'g' : ''} = <b>${toSigFigs(finalYield, sf)} ${d.unit} ${d.prodName}</b>`;
+        }
+        else if (d.subType === 3) {
+            const lrMol = lrIdx === 1 ? mol1 : mol2;
+            const lrCoeff = lrIdx === 1 ? d.coeff1 : d.coeff2;
+            const erCoeff = lrIdx === 1 ? d.coeff2 : d.coeff1;
+            const erMass = lrIdx === 1 ? d.mass2 : d.mass1;
+            const erStartAmt = lrIdx === 1 ? (d.isMass ? d.amt2 : mol2) : (d.isMass ? d.amt1 : mol1);
+
+            const usedER_mol = lrMol * (erCoeff / lrCoeff);
+            let finalRemain = (lrIdx === 1 ? mol2 : mol1) - usedER_mol;
+            if (d.isMass) finalRemain *= erMass;
+
+            stepText += `<b>Step 2: Find amount of Excess used</b><br>`;
+            stepText += `${lrMol.toFixed(3)} mol ${lrName} (LR) &times; ${frac(erCoeff + ' mol ' + erName, lrCoeff + ' mol ' + lrName)} = ${usedER_mol.toFixed(3)} mol ${erName} used<br><br>`;
+            stepText += `<b>Step 3: Subtract from starting amount</b><br>`;
+            stepText += `${erStartAmt} ${d.unit} total - ${d.isMass ? (usedER_mol * erMass).toFixed(2) : usedER_mol.toFixed(3)} ${d.unit} used = <b>${toSigFigs(finalRemain, sf)} ${d.unit} remaining</b>`;
+        }
+
+        ad.innerHTML = `<strong>Limiting Reactant Analysis:</strong><div class="setup-container" style="display:block;">${formatSub(stepText)}</div><br><small><i>Rounded to ${sf} sig figs.</i></small>`;
+        return;
+    }
+
+    // 3. Standard Stoichiometry Logic
     const ratioFrac = frac(`${d.coeffB} mol ${d.nameB}`, `${d.coeffA} mol ${d.nameA}`);
 
     if (d.mode === 'mole-mole') {
@@ -303,34 +359,29 @@ function showAnswer() {
         steps = `${v} mol ${d.nameA} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
     } 
     else if (d.mode === 'mole-mass') {
-        if (d.direction === 0) { // Mol to Gram
+        if (d.direction === 0) {
             const ans = v * (d.coeffB / d.coeffA) * d.massB;
             steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac(d.massB + ' g', '1 mol')} = <b>${toSigFigs(ans, sf)} g ${d.nameB}</b>`;
-        } else { // Gram to Mol
+        } else {
             const ans = v / d.massA * (d.coeffB / d.coeffA);
             steps = `${v} g ${d.nameA} &times; ${frac('1 mol', d.massA + ' g')} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
         }
     }
-    // Replace the mole-part block in showAnswer with this:
     else if (d.mode === 'mole-part') {
-    if (d.direction === 0) { // Mol to Particles
-        // We calculate based on the 6.022 multiplier
-        const rawMantissa = v * (d.coeffB / d.coeffA) * 6.022;
-        const resultHTML = formatScientific(rawMantissa, sf);
-        
-        steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${resultHTML} units</b>`;
-        } else { // Particles to Mol
-        // v here is the mantissa (e.g., 5.40 from 5.40 x 10^23)
-        const rawMol = (v / 6.022) * (d.coeffB / d.coeffA);
-        
-        steps = `${v}&times;10²³ units &times; ${frac('1 mol', '6.022&times;10²³ units')} &times; ${ratioFrac} = <b>${toSigFigs(rawMol, sf)} mol ${d.nameB}</b>`;
+        if (d.direction === 0) {
+            const rawMantissa = v * (d.coeffB / d.coeffA) * 6.022;
+            const resultHTML = formatScientific(rawMantissa, sf);
+            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${resultHTML} units</b>`;
+        } else {
+            const rawMol = (v / 6.022) * (d.coeffB / d.coeffA);
+            steps = `${v}&times;10²³ units &times; ${frac('1 mol', '6.022&times;10²³ units')} &times; ${ratioFrac} = <b>${toSigFigs(rawMol, sf)} mol ${d.nameB}</b>`;
         }
     }
     else if (d.mode === 'mole-vol') {
-        if (d.direction === 0) { // Mol to Volume
+        if (d.direction === 0) {
             const ans = v * (d.coeffB / d.coeffA) * 22.4;
             steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('22.4 L', '1 mol')} = <b>${toSigFigs(ans, sf)} L ${d.nameB}</b>`;
-        } else { // Volume to Mol
+        } else {
             const ans = v / 22.4 * (d.coeffB / d.coeffA);
             steps = `${v} L ${d.nameA} &times; ${frac('1 mol', '22.4 L')} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
         }
