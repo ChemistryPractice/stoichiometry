@@ -222,6 +222,11 @@ function formatSub(text) {
                 ? `What <b>volume (L)</b> of ${nameB} gas (STP) is involved if <b>${val} moles</b> of ${nameA} react?`
                 : `How many <b>moles</b> of ${nameB} are involved if <b>${val} Liters</b> of ${nameA} gas react at STP?`;
             break;
+        // Inside generateProblem()
+        case 'mass-mass':
+            pText = `What <b>mass (grams)</b> of ${nameB} is involved if <b>${val} grams</b> of ${nameA} react?`;
+            currentData.mode = 'mass-mass';
+            break;
     }
     document.getElementById('problem-text').innerHTML = pText;
 }
