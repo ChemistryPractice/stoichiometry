@@ -103,37 +103,41 @@
     return `${toSigFigs(mantissa, sf)} &times; 10<sup>${exponent}</sup>`;
 }
     
-    const data = {
-        elements: { "H": 1.01, "O": 16.00, "Na": 22.99, "Cl": 35.45, "C": 12.01, "N": 14.01, "S": 32.06, "K": 39.10, "Ca": 40.08, "Mg": 24.31 },
-        equations: [
-            { eq: "2H₂ + O₂ → 2H₂O", ratio: [2, 1, 2], names: ["H₂", "O₂", "H₂O"], masses: [2.02, 32.00, 18.02] },
-            { eq: "N₂ + 3H₂ → 2NH₃", ratio: [1, 3, 2], names: ["N₂", "H₂", "NH₃"], masses: [28.02, 6.06, 17.03] },
-            { eq: "CH₄ + 2O₂ → CO₂ + 2H₂O", ratio: [1, 2, 1, 2], names: ["CH₄", "O₂", "CO₂", "H₂O"], masses: [16.04, 32.00, 44.01, 18.02] },
-            { eq: "2Na + Cl₂ → 2NaCl", ratio: [2, 1, 2], names: ["Na", "Cl₂", "NaCl"], masses: [22.99, 70.90, 58.44] },
-            { eq: "CaCO₃ → CaO + CO₂", ratio: [1, 1, 1], names: ["CaCO₃", "CaO", "CO₂"], masses: [100.09, 56.08, 44.01] }
-        ],
-        // Replace the titrations array in your data object:
-titrations: [
-    { 
-        eq: "HCl + NaOH → NaCl + H₂O", 
-        acid: "HCl", base: "NaOH", 
-        cA: 1, cB: 1, // Coefficients
-        aMass: 36.46, bMass: 40.00 
-    },
-    { 
-        eq: "H₂SO₄ + 2NaOH → Na₂SO₄ + 2H₂O", 
-        acid: "H₂SO₄", base: "NaOH", 
-        cA: 1, cB: 2, 
-        aMass: 98.08, bMass: 40.00 
-    },
-    { 
-        eq: "2HCl + Ca(OH)₂ → CaCl₂ + 2H₂O", 
-        acid: "HCl", base: "Ca(OH)₂", 
-        cA: 2, cB: 1, 
-        aMass: 36.46, bMass: 74.10 
-    }
-]
-    };
+const data = {
+    elements: { "H": 1.01, "O": 16.00, "Na": 22.99, "Cl": 35.45, "C": 12.01, "N": 14.01, "S": 32.06, "K": 39.10, "Ca": 40.08, "Mg": 24.31, "P": 30.97, "Fe": 55.85, "Pb": 207.2, "I": 126.90, "Ba": 137.33, "F": 19.00, "Si": 28.09, "Al": 26.98, "Zn": 65.38 },
+    
+    equations: [
+        // Original Set
+        { eq: "2H₂ + O₂ → 2H₂O", ratio: [2, 1, 2], names: ["H₂", "O₂", "H₂O"], masses: [2.02, 32.00, 18.02] },
+        { eq: "N₂ + 3H₂ → 2NH₃", ratio: [1, 3, 2], names: ["N₂", "H₂", "NH₃"], masses: [28.02, 6.06, 17.03] },
+        { eq: "CH₄ + 2O₂ → CO₂ + 2H₂O", ratio: [1, 2, 1, 2], names: ["CH₄", "O₂", "CO₂", "H₂O"], masses: [16.04, 32.00, 44.01, 18.02] },
+        { eq: "2Na + Cl₂ → 2NaCl", ratio: [2, 1, 2], names: ["Na", "Cl₂", "NaCl"], masses: [22.99, 70.90, 58.44] },
+        { eq: "CaCO₃ → CaO + CO₂", ratio: [1, 1, 1], names: ["CaCO₃", "CaO", "CO₂"], masses: [100.09, 56.08, 44.01] },
+        
+        // New Practice Set
+        { eq: "2Mg + O₂ → 2MgO", ratio: [2, 1, 2], names: ["Mg", "O₂", "MgO"], masses: [24.31, 32.00, 40.31] },
+        { eq: "2KClO₃ → 2KCl + 3O₂", ratio: [2, 2, 3], names: ["KClO₃", "KCl", "O₂"], masses: [122.55, 74.55, 32.00] },
+        { eq: "C₃H₈ + 5O₂ → 3CO₂ + 4H₂O", ratio: [1, 5, 3, 4], names: ["C₃H₈", "O₂", "CO₂", "H₂O"], masses: [44.11, 32.00, 44.01, 18.02] },
+        { eq: "2Al + 3Cl₂ → 2AlCl₃", ratio: [2, 3, 2], names: ["Al", "Cl₂", "AlCl₃"], masses: [26.98, 70.90, 133.33] },
+        { eq: "Zn + 2HCl → ZnCl₂ + H₂", ratio: [1, 2, 1, 1], names: ["Zn", "HCl", "ZnCl₂", "H₂"], masses: [65.38, 36.46, 136.28, 2.02] },
+        { eq: "2H₂O₂ → 2H₂O + O₂", ratio: [2, 2, 1], names: ["H₂O₂", "H₂O", "O₂"], masses: [34.02, 18.02, 32.00] },
+        { eq: "Fe₂O₃ + 3CO → 2Fe + 3CO₂", ratio: [1, 3, 2, 3], names: ["Fe₂O₃", "CO", "Fe", "CO₂"], masses: [159.70, 28.01, 55.85, 44.01] },
+        { eq: "2Na + 2H₂O → 2NaOH + H₂", ratio: [2, 2, 2, 1], names: ["Na", "H₂O", "NaOH", "H₂"], masses: [22.99, 18.02, 40.00, 2.02] },
+        { eq: "Pb(NO₃)₂ + 2KI → PbI₂ + 2KNO₃", ratio: [1, 2, 1, 2], names: ["Pb(NO₃)₂", "KI", "PbI₂", "KNO₃"], masses: [331.22, 166.00, 461.01, 101.10] },
+        { eq: "Mg(OH)₂ + 2HCl → MgCl₂ + 2H₂O", ratio: [1, 2, 1, 2], names: ["Mg(OH)₂", "HCl", "MgCl₂", "H₂O"], masses: [58.33, 36.46, 95.21, 18.02] },
+        { eq: "4Al + 3O₂ → 2Al₂O₃", ratio: [4, 3, 2], names: ["Al", "O₂", "Al₂O₃"], masses: [26.98, 32.00, 101.96] },
+        { eq: "2C₂H₆ + 7O₂ → 4CO₂ + 6H₂O", ratio: [2, 7, 4, 6], names: ["C₂H₆", "O₂", "CO₂", "H₂O"], masses: [30.08, 32.00, 44.01, 18.02] },
+        { eq: "BaCl₂ + Na₂SO₄ → BaSO₄ + 2NaCl", ratio: [1, 1, 1, 2], names: ["BaCl₂", "Na₂SO₄", "BaSO₄", "NaCl"], masses: [208.23, 142.04, 233.39, 58.44] },
+        { eq: "SiO₂ + 4HF → SiF₄ + 2H₂O", ratio: [1, 4, 1, 2], names: ["SiO₂", "HF", "SiF₄", "H₂O"], masses: [60.08, 20.01, 104.08, 18.02] },
+        { eq: "CaC₂ + 2H₂O → Ca(OH)₂ + C₂H₂", ratio: [1, 2, 1, 1], names: ["CaC₂", "H₂O", "Ca(OH)₂", "C₂H₂"], masses: [64.10, 18.02, 74.10, 26.04] }
+    ],
+    
+    titrations: [
+        { eq: "1HCl + 1NaOH → 1NaCl + 1H₂O", acid: "HCl", base: "NaOH", cA: 1, cB: 1 },
+        { eq: "1H₂SO₄ + 2NaOH → 1Na₂SO₄ + 2H₂O", acid: "H₂SO₄", base: "NaOH", cA: 1, cB: 2 },
+        { eq: "2HCl + 1Ca(OH)₂ → 1CaCl₂ + 2H₂O", acid: "HCl", base: "Ca(OH)₂", cA: 2, cB: 1 }
+    ]
+};
 
     let currentMode = '';
     let currentData = {};
