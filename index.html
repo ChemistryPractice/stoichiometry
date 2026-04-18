@@ -170,11 +170,11 @@ function formatSub(text) {
     return text.replace(/([A-Za-z\)])(\d+)/g, '$1<sub>$2</sub>'); 
 }
 
-        function generateProblem() {
+     function generateProblem() {
     if (!currentMode) return alert("Select a type from the sidebar first!");
     document.getElementById('answer-display').classList.remove('visible');
     
-    // 1. Handle Titration separately to preserve its working logic
+    // 1. Handle Titration separately
     if (currentMode === 'titration') {
         const t = data.titrations[Math.floor(Math.random() * data.titrations.length)];
         const solveForVol = Math.random() > 0.5;
@@ -195,7 +195,57 @@ function formatSub(text) {
         return;
     }
 
-    // 2. Standard Stoichiometry Logic with Randomization
+    // 2. NEW: Handle Limiting Reactant separately
+    if (currentMode === 'limiting-reactant') {
+        const eqSet = data.equations[Math.floor(Math.random() * data.equations.length)];
+        const reactants = [];
+        const arrowIndex = eqSet.eq.indexOf('→');
+        
+        for(let i=0; i < eqSet.names.length; i++) {
+            if (eqSet.eq.indexOf(eqSet.names[i]) < arrowIndex) reactants.push(i);
+        }
+
+        let r1 = reactants[0];
+        let r2 = reactants[1];
+        
+        const amt1 = (Math.random() * 5 + 1).toFixed(2);
+        const amt2 = (Math.random() * 5 + 1).toFixed(2);
+        const isMass = Math.random() > 0.5; 
+        const unit = isMass ? "grams" : "moles";
+
+        const subType = Math.floor(Math.random() * 4);
+        let prodIdx = Math.floor(Math.random() * (eqSet.names.length - reactants.length)) + reactants.length;
+
+        currentData = {
+            eq: eqSet.eq,
+            r1Idx: r1, r2Idx: r2,
+            name1: eqSet.names[r1], name2: eqSet.names[r2],
+            coeff1: eqSet.ratio[r1], coeff2: eqSet.ratio[r2],
+            mass1: eqSet.masses[r1], mass2: eqSet.masses[r2],
+            amt1, amt2, unit, isMass,
+            subType, 
+            prodName: eqSet.names[prodIdx], 
+            prodCoeff: eqSet.ratio[prodIdx],
+            prodMass: eqSet.masses[prodIdx],
+            type: 'limiting'
+        };
+
+        document.getElementById('equation-display').innerHTML = formatSub(currentData.eq);
+        
+        const promptBase = `If <b>${amt1} ${unit}</b> of ${formatSub(currentData.name1)} and <b>${amt2} ${unit}</b> of ${formatSub(currentData.name2)} react:`;
+        
+        const prompts = [
+            `${promptBase} Which is the <b>limiting reactant</b>?`,
+            `${promptBase} Which reactant is in <b>excess</b>?`,
+            `${promptBase} What <b>${unit}</b> of ${formatSub(currentData.prodName)} will be produced?`,
+            `${promptBase} How many <b>${unit}</b> of the excess reactant will <b>remain</b> after the reaction?`
+        ];
+
+        document.getElementById('problem-text').innerHTML = prompts[subType];
+        return; // STOP HERE for limiting problems
+    }
+
+    // 3. Standard Stoichiometry Logic (Mole-Mole, Mass-Mass, etc.)
     const eqSet = data.equations[Math.floor(Math.random() * data.equations.length)];
     const val = (Math.random() * 5 + 1).toFixed(2);
     
@@ -203,7 +253,6 @@ function formatSub(text) {
     let idxB = Math.floor(Math.random() * eqSet.names.length);
     while(idxA === idxB) idxB = Math.floor(Math.random() * eqSet.names.length);
 
-    // 0: Start with Moles, End with Unit | 1: Start with Unit, End with Moles
     const direction = Math.floor(Math.random() * 2); 
 
     currentData = {
@@ -244,10 +293,8 @@ function formatSub(text) {
                 ? `What <b>volume (L)</b> of ${nameB} gas (STP) is involved if <b>${val} moles</b> of ${nameA} react?`
                 : `How many <b>moles</b> of ${nameB} are involved if <b>${val} Liters</b> of ${nameA} gas react at STP?`;
             break;
-        // Inside generateProblem()
         case 'mass-mass':
             pText = `What <b>mass (grams)</b> of ${nameB} is involved if <b>${val} grams</b> of ${nameA} react?`;
-            currentData.mode = 'mass-mass';
             break;
     }
     document.getElementById('problem-text').innerHTML = pText;
