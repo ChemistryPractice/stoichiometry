@@ -85,6 +85,24 @@
         s = s.replace(/^0+/, '');
         return s.length;
 }
+    function formatScientific(val, sf) {
+    let exponent = 23;
+    let mantissa = val;
+
+    // Normalize: If mantissa is 10 or higher, move decimal left, increase exponent
+    while (mantissa >= 10) {
+        mantissa /= 10;
+        exponent += 1;
+    }
+    // If mantissa is less than 1 (and not 0), move decimal right, decrease exponent
+    while (mantissa < 1 && mantissa !== 0) {
+        mantissa *= 10;
+        exponent -= 1;
+    }
+
+    return `${toSigFigs(mantissa, sf)} &times; 10<sup>${exponent}</sup>`;
+}
+    
     const data = {
         elements: { "H": 1.01, "O": 16.00, "Na": 22.99, "Cl": 35.45, "C": 12.01, "N": 14.01, "S": 32.06, "K": 39.10, "Ca": 40.08, "Mg": 24.31 },
         equations: [
@@ -290,13 +308,19 @@ function showAnswer() {
             steps = `${v} g ${d.nameA} &times; ${frac('1 mol', d.massA + ' g')} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
         }
     }
+    // Replace the mole-part block in showAnswer with this:
     else if (d.mode === 'mole-part') {
-        if (d.direction === 0) { // Mol to Particles
-            const ans = v * (d.coeffB / d.coeffA) * 6.022;
-            steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${toSigFigs(ans, sf)}&times;10²³ units</b>`;
+    if (d.direction === 0) { // Mol to Particles
+        // We calculate based on the 6.022 multiplier
+        const rawMantissa = v * (d.coeffB / d.coeffA) * 6.022;
+        const resultHTML = formatScientific(rawMantissa, sf);
+        
+        steps = `${v} mol ${d.nameA} &times; ${ratioFrac} &times; ${frac('6.022&times;10²³ units', '1 mol')} = <b>${resultHTML} units</b>`;
         } else { // Particles to Mol
-            const ans = v / 6.022 * (d.coeffB / d.coeffA);
-            steps = `${v}&times;10²³ units &times; ${frac('1 mol', '6.022&times;10²³ units')} &times; ${ratioFrac} = <b>${toSigFigs(ans, sf)} mol ${d.nameB}</b>`;
+        // v here is the mantissa (e.g., 5.40 from 5.40 x 10^23)
+        const rawMol = (v / 6.022) * (d.coeffB / d.coeffA);
+        
+        steps = `${v}&times;10²³ units &times; ${frac('1 mol', '6.022&times;10²³ units')} &times; ${ratioFrac} = <b>${toSigFigs(rawMol, sf)} mol ${d.nameB}</b>`;
         }
     }
     else if (d.mode === 'mole-vol') {
