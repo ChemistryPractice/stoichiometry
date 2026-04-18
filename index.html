@@ -164,6 +164,9 @@ function formatSub(text) {
     function frac(n, d) { return `<div class="fraction"><span class="numerator">${n}</span><span class="denominator">${d}</span></div>`; }
 
     function showAnswer() {
+        // If no problem has been generated yet, just exit
+        if (!currentData.eq && currentData.type !== 'titration') return;
+        
         const ad = document.getElementById('answer-display');
         ad.classList.add('visible');
         let steps = "";
